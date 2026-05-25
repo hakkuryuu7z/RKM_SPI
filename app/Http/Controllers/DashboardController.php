@@ -31,6 +31,6 @@ class DashboardController extends Controller
         }
 
         // Kalau Admin / SPV, masuk ke sini
-        return view('dashboard.index');
+        return view('dashboard');
     }
 }

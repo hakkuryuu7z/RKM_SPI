@@ -29,7 +29,7 @@
                     </div>
                     <div>
                         <p class="text-muted mb-0 small fw-bold">TOTAL PENGGUNA</p>
-                        <h4 class="fw-bold mb-0" style="color: #0c4a6e;">{{ $total_users }} <span class="fs-6 text-muted fw-normal">Akun</span></h4>
+                        <h4 class="fw-bold mb-0" style="color: #0c4a6e;">69 <span class="fs-6 text-muted fw-normal">Akun</span></h4>
                     </div>
                 </div>
             </div>
@@ -43,7 +43,7 @@
                     </div>
                     <div>
                         <p class="text-muted mb-0 small fw-bold">TINGKAT AKSES</p>
-                        <h4 class="fw-bold mb-0" style="color: #0c4a6e;">{{ $total_roles }} <span class="fs-6 text-muted fw-normal">Role</span></h4>
+                        <h4 class="fw-bold mb-0" style="color: #0c4a6e;">69<span class="fs-6 text-muted fw-normal">Role</span></h4>
                     </div>
                 </div>
             </div>
