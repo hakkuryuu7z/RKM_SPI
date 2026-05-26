@@ -34,6 +34,9 @@ Route::middleware('auth')->group(function () {
     // Halaman Dashboard Utama
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
+    // --- TAMBAH RUTE INI UNTUK DETAIL TOKO MR ---
+    Route::get('/mr/toko/{id}', [DashboardController::class, 'detailToko'])->name('mr.toko.detail');
+
     // Fitur Sinkronisasi Member API
     Route::get('/sync-member', [MemberController::class, 'syncApi'])->name('member.sync');
 
@@ -63,6 +66,13 @@ Route::middleware('auth')->group(function () {
     Route::post('/jalur/delete', [JalurController::class, 'destroy'])->name('jalur.destroy');
     Route::get('/jalur/template', [JalurController::class, 'downloadTemplate'])->name('jalur.template');
     Route::post('/jalur/import', [JalurController::class, 'import'])->name('jalur.import');
+
+    // Rute untuk halaman Pengaturan Admin
+    Route::get('/admin/setting', [DashboardController::class, 'settingForm'])->name('admin.setting');
+    Route::post('/admin/setting', [DashboardController::class, 'settingUpdate'])->name('admin.setting.update');
+    // Rute Proses Simpan Check-In MR
+    Route::post('/mr/checkin/{id}', [DashboardController::class, 'checkInStore'])->name('mr.checkin.store');
+    Route::post('/mr/checkout/{id}', [DashboardController::class, 'checkOutStore'])->name('mr.checkout.store');
     // Fitur Keluar Sistem
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 });

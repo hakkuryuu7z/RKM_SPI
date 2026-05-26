@@ -207,6 +207,11 @@
                     <i class="fa-solid fa-user-shield me-2"></i> Kelola Role
                 </a>
             </li>
+            <li class="nav-item">
+                <a class="nav-link {{ Request::is('admin/setting') ? 'active' : '' }}" href="{{ route('admin.setting') }}">
+                    <i class="fa-solid fa-sliders me-2"></i> Parameter Validasi MR
+                </a>
+            </li>
             @endif
             <!-- Nanti menu lain ditambah di sini -->
         </ul>
@@ -282,6 +287,11 @@
                         <i class="fa-solid fa-user-shield me-2"></i> Kelola Role
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ Request::is('admin/setting') ? 'active' : '' }}" href="{{ route('admin.setting') }}">
+                        <i class="fa-solid fa-sliders me-2"></i> Parameter Validasi MR
+                    </a>
+                </li>
                 @endif
             </ul>
         </div>
@@ -313,6 +323,8 @@
             })
         }
     </script>
+
+
 </body>
 
 </html>

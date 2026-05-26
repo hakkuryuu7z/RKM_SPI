@@ -61,7 +61,7 @@
         $status = 'BELUM';
         @endphp
 
-        <a href="#" class="text-decoration-none">
+        <a href="{{ route('mr.toko.detail', $tugas->jlr_id) }}" class="text-decoration-none">
             <div class="card mobile-card bg-white p-3">
                 <div class="d-flex align-items-center gap-3">
 
