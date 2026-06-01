@@ -93,12 +93,31 @@ class RekapKunjunganController extends Controller
     /**
      * Mengambil Informasi Rinci Transaksi Baris tbtr_rkm (AJAX Respon)
      */
+    /**
+     * Mengambil Informasi Rinci Transaksi Baris tbtr_rkm (AJAX Respon - Multi-Photo Support)
+     */
     public function show($id)
     {
         $detail = TrRkm::with(['user'])->where('rkm_id', $id)->first();
 
         if (!$detail) {
             return response()->json(['message' => 'Arsip dokumentasi realisasi kunjungan tidak ditemukan.'], 404);
+        }
+
+        // 💡 DEKODE STRUKTUR FOTO: Mengantisipasi data lama (string) dan data baru (JSON array)
+        $kumpulanFoto = [];
+        if (!empty($detail->foto_kunjungan)) {
+            $arrayDekode = json_decode($detail->foto_kunjungan, true);
+
+            if (is_array($arrayDekode)) {
+                // Jika format baru berbentuk array JSON
+                foreach ($arrayDekode as $namaBerkas) {
+                    $kumpulanFoto[] = asset('uploads/kunjungan/' . $namaBerkas);
+                }
+            } else {
+                // Kompatibilitas data lama jika masih berupa string nama foto tunggal
+                $kumpulanFoto[] = asset('uploads/kunjungan/' . $detail->foto_kunjungan);
+            }
         }
 
         return response()->json([
@@ -110,7 +129,7 @@ class RekapKunjunganController extends Controller
             'checkout'       => $detail->waktu_checkout ? Carbon::parse($detail->waktu_checkout)->format('H:i:s') : '-',
             'status'         => strtoupper($detail->status_kunjungan) ?? 'BELUM KUNJUNGAN',
             'order_status'   => $detail->rkm_order_status ?? 'Tidak',
-            'foto'           => $detail->foto_kunjungan ? asset('uploads/kunjungan/' . $detail->foto_kunjungan) : null,
+            'fotos'          => $kumpulanFoto, // Mengirimkan array utuh seluruh tautan foto resmi
             'catatan'        => $detail->rkm_keteranganmember ?? 'Tidak ada catatan khusus dari lapangan.'
         ]);
     }

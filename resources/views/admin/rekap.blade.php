@@ -252,12 +252,9 @@
                         <div class="p-2 bg-light rounded text-dark small" id="aud-catatan" style="min-height: 50px;">-</div>
                     </div>
                     <div class="col-12 border-top pt-2 text-center">
-                        <small class="text-muted text-start d-block mb-2">Lampiran Dokumentasi Foto Kamera (Klik gambar untuk memperbesar di tab baru)</small>
-                        <div id="container-foto">
-                            <img src="" id="aud-foto" class="img-fluid rounded border shadow-sm img-thumbnail"
-                                style="max-height: 270px; object-fit: cover; cursor: pointer;"
-                                alt="Bukti Lapangan"
-                                onclick="window.open(this.src, '_blank')">
+                        <small class="text-muted fw-semibold d-block text-start mb-2">Lampiran Dokumentasi Foto Kamera (Klik gambar untuk memperbesar di tab baru)</small>
+                        <div id="container-foto" class="d-flex flex-wrap gap-2 justify-content-center align-items-center">
+                            <!-- Element <img> berjejer akan diproduksi otomatis di sini melalui javascript blay -->
                         </div>
                         <div id="foto-kosong" class="text-muted small py-3 bg-light rounded border border-dashed">
                             <i class="fa-solid fa-image-slice d-block mb-1"></i> Tidak ada lampiran gambar dari lapangan.
@@ -319,7 +316,7 @@
         });
 
         // =================================================================
-        // 2. LOGIKA AJAX MODAL DETAIL JENDELA AUDIT (TABEL LOG TAB 2)
+        // 2. LOGIKA AJAX MODAL DETAIL JENDELA AUDIT (SUPPORT MULTI-PHOTOS)
         // =================================================================
         const modalElement = new bootstrap.Modal(document.getElementById('modalAuditKunjungan'));
 
@@ -341,7 +338,7 @@
                     .then(data => {
                         Swal.close();
 
-                        // Mengisi komponen teks formal di dalam modal
+                        // Mengisi komponen teks formal di dalam modal Jendela Audit
                         document.getElementById('aud-tanggal').textContent = data.tanggal;
                         document.getElementById('aud-mr').textContent = data.mr;
                         document.getElementById('aud-toko').textContent = data.kode + ' / ' + data.nama_toko;
@@ -349,7 +346,7 @@
                         document.getElementById('aud-checkout').textContent = data.checkout;
                         document.getElementById('aud-catatan').textContent = data.catatan;
 
-                        // Pengecekan status aktivitas order komersial
+                        // Pengecekan status aktivitas operasional order komersial outlet
                         const audOrderStatus = document.getElementById('aud-order-status');
                         if (data.order_status && data.order_status.toLowerCase() === 'order') {
                             audOrderStatus.innerHTML = '<span class="badge bg-success text-white rounded-pill px-3 py-1"><i class="fa-solid fa-cart-shopping me-1"></i> Sukses Pengambilan Order</span>';
@@ -357,16 +354,37 @@
                             audOrderStatus.innerHTML = '<span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-3 py-1"><i class="fa-solid fa-ban me-1"></i> Tidak Mengambil Order / Toko Tutup</span>';
                         }
 
-                        // Mengatur visualisasi lampiran dokumentasi foto kamera
-                        const imgNode = document.getElementById('aud-foto');
+                        // =================================================================
+                        // 💡 PERBAIKAN UTAMA DISINI BOLO: GENERATOR MULTIPLE IMAGES DYNAMIC
+                        // =================================================================
+                        const containerFoto = document.getElementById('container-foto');
                         const fotoKosongNode = document.getElementById('foto-kosong');
 
-                        if (data.foto) {
-                            imgNode.src = data.foto;
-                            document.getElementById('container-foto').style.display = 'block';
+                        // Bersihkan sisa render elemen foto dari klik data modal sebelumnya
+                        containerFoto.innerHTML = '';
+
+                        if (data.fotos && data.fotos.length > 0) {
+                            // Melakukan perulangan untuk membangun elemen gambar secara berjejer
+                            data.fotos.forEach(function(urlFoto) {
+                                const elemenImg = document.createElement('img');
+                                elemenImg.src = urlFoto;
+                                elemenImg.className = 'img-fluid rounded border shadow-sm img-thumbnail';
+                                elemenImg.style.maxHeight = '140px';
+                                elemenImg.style.maxWidth = '30%'; // Membatasi lebar agar berjejer rapi maks 3 kolom ke samping
+                                elemenImg.style.objectFit = 'cover';
+                                elemenImg.style.cursor = 'pointer';
+                                elemenImg.alt = 'Bukti Lapangan';
+
+                                // Jalan ninja inject window open native bypass overlay trap bootstrap modal
+                                elemenImg.setAttribute('onclick', "window.open(this.src, '_blank')");
+
+                                containerFoto.appendChild(elemenImg);
+                            });
+
+                            containerFoto.style.display = 'flex';
                             fotoKosongNode.style.display = 'none';
                         } else {
-                            document.getElementById('container-foto').style.display = 'none';
+                            containerFoto.style.display = 'none';
                             fotoKosongNode.style.display = 'block';
                         }
 
