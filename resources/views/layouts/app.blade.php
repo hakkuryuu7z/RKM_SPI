@@ -223,7 +223,7 @@
     </nav>
 
     <!-- 2. MAIN CONTENT AREA -->
-    <div class="main-content d-flex flex-column">
+    <div class="main-wrapper d-flex flex-column min-vh-100 flex-grow-1">
 
         <!-- Navbar Atas -->
         <header class="p-3 bg-white shadow-sm d-flex justify-content-between align-items-center">
@@ -252,9 +252,19 @@
         </header>
 
         <!-- Area Konten Utama (Berubah-ubah tiap halaman) -->
-        <main class="p-4">
+        <main class="content-body flex-grow-1">
             @yield('content')
         </main>
+        <footer class="bg-white py-3 border-top mt-auto no-print">
+            <div class="container-fluid px-4 d-flex flex-column flex-sm-row justify-content-between align-items-center small text-muted">
+                <div class="mb-1 mb-sm-0 text-center text-sm-start">
+                    &copy; {{ date('Y') }} <span class="fw-bold text-dark">RKM SPI Majalengka</span>. Hak Cipta Dilindungi Undang-Undang.
+                </div>
+                <div class="text-center text-sm-end">
+                    Dikembangkan dengan <i class="fa-solid fa-heart text-danger"></i> oleh <span class="fw-bold text-dark">Wildan & Khoirul</span>
+                </div>
+            </div>
+        </footer>
     </div>
 
     <!-- 3. SIDEBAR MOBILE (Offcanvas menu geser) -->
@@ -335,15 +345,7 @@
         }
     </script>
 
-    <!-- 🏛️ FOOTER SYSTEM COPYRIGHT - WILDAN & KHOIRUL -->
-    <footer class="footer mt-auto py-3 bg-white border-top no-print">
-        <div class="container-fluid text-center">
-            <span class="text-muted small" style="font-size: 11px;">
-                &copy; {{ date('Y') }} <b>RKM SPI Majalengka</b>. Hak Cipta Dilindungi Undang-Undang.<br>
-                <span class="text-secondary">Dikembangkan dengan <i class="fa-solid fa-heart text-danger"></i> oleh <b>Wildan & Khoirul</b></span>
-            </span>
-        </div>
-    </footer>
+
 </body>
 
 </html>
