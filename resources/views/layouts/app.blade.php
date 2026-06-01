@@ -335,7 +335,15 @@
         }
     </script>
 
-
+    <!-- 🏛️ FOOTER SYSTEM COPYRIGHT - WILDAN & KHOIRUL -->
+    <footer class="footer mt-auto py-3 bg-white border-top no-print">
+        <div class="container-fluid text-center">
+            <span class="text-muted small" style="font-size: 11px;">
+                &copy; {{ date('Y') }} <b>RKM SPI Majalengka</b>. Hak Cipta Dilindungi Undang-Undang.<br>
+                <span class="text-secondary">Dikembangkan dengan <i class="fa-solid fa-heart text-danger"></i> oleh <b>Wildan & Khoirul</b></span>
+            </span>
+        </div>
+    </footer>
 </body>
 
 </html>
