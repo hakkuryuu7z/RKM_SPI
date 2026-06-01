@@ -258,7 +258,7 @@
         <footer class="bg-white py-3 border-top mt-auto no-print">
             <div class="container-fluid px-4 d-flex flex-column flex-sm-row justify-content-between align-items-center small text-muted">
                 <div class="mb-1 mb-sm-0 text-center text-sm-start">
-                    &copy; {{ date('Y') }} <span class="fw-bold text-dark">RKM SPI Majalengka</span>. Hak Cipta Dilindungi Undang-Undang.
+                    &copy; {{ date('Y') }} <span class="fw-bold text-dark">RKM SPI</span>. Hak Cipta Dilindungi Undang-Undang.
                 </div>
                 <div class="text-center text-sm-end">
                     Dikembangkan dengan <i class="fa-solid fa-heart text-danger"></i> oleh <span class="fw-bold text-dark">Wildan & Khoirul</span>
