@@ -8,17 +8,36 @@ use App\Models\Member;
 
 class MemberController extends Controller
 {
-    public function index()
+    /**
+     * Menampilkan Indeks Data Member disertai Fitur Pencarian Global
+     */
+    public function index(Request $request)
     {
-        // Ambil semua data member dari database
-        $members = Member::all();
+        $search = $request->get('search');
+        $query = Member::query();
 
-        // Tampilkan ke view members/index.blade.php
-        return view('members.index', compact('members'));
+        // Kondisional Pencarian Berdasarkan Kode, Nama, Wilayah, atau No Salesman
+        if (!empty($search)) {
+            $query->where(function ($q) use ($search) {
+                $q->where('kode', 'LIKE', "%{$search}%")
+                    ->orWhere('nama', 'LIKE', "%{$search}%")
+                    ->orWhere('kota', 'LIKE', "%{$search}%")
+                    ->orWhere('cus_nosalesman', 'LIKE', "%{$search}%");
+            });
+        }
+
+        // Menggunakan appends() agar keyword pencarian tidak hilang saat berpindah halaman pagination
+        $members = $query->paginate(10)->appends(['search' => $search]);
+
+        return view('members.index', compact('members', 'search'));
     }
+
+    /**
+     * Sinkronisasi Data Member dari API Eksternal
+     */
     public function syncApi()
     {
-        set_time_limit(300); // Waktu eksekusi dilamain
+        set_time_limit(300);
 
         try {
             $url_api = 'http://100.85.26.66/rkm_api/api_get_member_koordinat.php';
@@ -30,21 +49,18 @@ class MemberController extends Controller
 
                 foreach ($dataApi as $data) {
                     Member::updateOrCreate(
-                        ['kode' => $data['kode']], // Patokan update/simpan
-
+                        ['kode' => $data['kode']],
                         [
                             'cus_kodeigr'        => $data['cus_kodeigr'],
                             'status'             => $data['status'],
-                            'no_ktp'             => $data['no_ktp'],
                             'nama'               => $data['nama'],
-                            'jenis_kelamin'      => $data['jenis_kelamin'],
                             'alamat'             => $data['alamat'],
                             'kota'               => $data['kota'],
                             'kode_pos'           => $data['kode_pos'],
                             'kelurahan'          => $data['kelurahan'],
-                            'telepon' => !empty($data['telepon']) ? substr($data['telepon'], 0, 20) : null,
-                            'hp'      => !empty($data['hp']) ? substr($data['hp'], 0, 20) : null,
-                            'contact_person1' => !empty($data['contact_person1']) ? substr($data['contact_person1'], 0, 20) : null,
+                            'telepon'            => !empty($data['telepon']) ? substr($data['telepon'], 0, 20) : null,
+                            'hp'                 => !empty($data['hp']) ? substr($data['hp'], 0, 20) : null,
+                            'contact_person1'    => !empty($data['contact_person1']) ? substr($data['contact_person1'], 0, 20) : null,
                             'contact_person2'    => $data['contact_person2'],
                             'alamat_2'           => $data['alamat_2'],
                             'kota_2'             => $data['kota_2'],
@@ -61,22 +77,95 @@ class MemberController extends Controller
                             'jumlah_kunjungan'   => $data['jumlah_kunjungan'],
                             'segmen_id'          => $data['segmen_id'],
                             'nama_segmen'        => $data['nama_segmen'],
-                            'tgl_lahir'          => $data['tgl_lahir'] ?: null,
                             'koordinat'          => $data['koordinat'] ?? null,
                             'lat'                => $data['lat'] ?? null,
                             'lng'                => $data['lng'] ?? null,
                             'cus_nosalesman'     => $data['no_salesman'],
-                            'jarak'          => $data['jarak'] ?? null,
+                            'jarak'              => $data['jarak'] ?? null,
                         ]
                     );
                 }
 
-                return back()->with('success', $jumlahData . ' Data Member berhasil disinkronisasi!');
+                return back()->with('success', 'Sebanyak ' . $jumlahData . ' data member berhasil disinkronisasi ke sistem lokal.');
             } else {
-                return back()->with('error', 'Gagal API. Status: ' . $response->status());
+                return back()->with('error', 'Gagal terhubung dengan server API. Kode Status: ' . $response->status());
             }
         } catch (\Exception $e) {
-            return back()->with('error', 'Error sistem: ' . $e->getMessage());
+            return back()->with('error', 'Kegagalan sistem: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Export Data Member ke Format Excel (Mengikuti Filter Pencarian Aktif)
+     */
+    public function exportExcel(Request $request)
+    {
+        $search = $request->get('search');
+        $query = Member::query();
+
+        if (!empty($search)) {
+            $query->where(function ($q) use ($search) {
+                $q->where('kode', 'LIKE', "%{$search}%")
+                    ->orWhere('nama', 'LIKE', "%{$search}%");
+            });
+        }
+
+        $members = $query->get();
+        $fileName = 'Data_Master_Member_' . date('Ymd_His') . '.csv';
+
+        $headers = [
+            "Content-type"        => "text/csv; charset=UTF-8",
+            "Content-Disposition" => "attachment; filename=$fileName",
+            "Pragma"              => "no-cache",
+            "Cache-Control"       => "must-revalidate, post-check=0, pre-check=0",
+            "Expires"             => "0"
+        ];
+
+        $columns = ['No', 'Kode Member', 'Nama Member', 'Nama Outlet', 'Alamat', 'Kecamatan', 'Kota', 'No Salesman', 'Status'];
+
+        $callback = function () use ($members, $columns) {
+            $file = fopen('php://output', 'w');
+            // Menambahkan BOM agar karakter khusus terbaca dengan benar di Microsoft Excel
+            fprintf($file, chr(0xEF) . chr(0xBB) . chr(0xBF));
+            fputcsv($file, $columns, ';');
+
+            foreach ($members as $index => $member) {
+                fputcsv($file, [
+                    $index + 1,
+                    $member->kode,
+                    $member->nama,
+                    $member->nama_outlet ?? '-',
+                    $member->alamat,
+                    $member->kecamatan ?? '-',
+                    $member->kota,
+                    $member->cus_nosalesman ?? '-',
+                    $member->status
+                ], ';');
+            }
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    /**
+     * Menampilkan Tampilan Cetak Khusus PDF (Mengikuti Filter Pencarian Aktif)
+     */
+    public function exportPdf(Request $request)
+    {
+        $search = $request->get('search');
+        $query = Member::query();
+
+        if (!empty($search)) {
+            $query->where(function ($q) use ($search) {
+                $q->where('kode', 'LIKE', "%{$search}%")
+                    ->orWhere('nama', 'LIKE', "%{$search}%");
+            });
+        }
+
+        $members = $query->get();
+        $tanggalCetak = now()->locale('id')->isoFormat('D MMMM YYYY H:i:s');
+
+        return view('members.pdf', compact('members', 'tanggalCetak'));
     }
 }

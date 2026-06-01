@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Models\Role;
 use App\Http\Controllers\JalurController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\RekapKunjunganController;
 
 /*
 |--------------------------------------------------------------------------
@@ -35,12 +36,13 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // --- TAMBAH RUTE INI UNTUK DETAIL TOKO MR ---
-    Route::get('/mr/toko/{id}', [DashboardController::class, 'detailToko'])->name('mr.toko.detail');
+    Route::get('/mr/toko/{id}', [DashboardController::class, 'detail'])->name('mr.toko.detail');
 
-    // Fitur Sinkronisasi Member API
-    Route::get('/sync-member', [MemberController::class, 'syncApi'])->name('member.sync');
-
+    // Grouping Rute Master Data Member
     Route::get('/members', [MemberController::class, 'index'])->name('members.index');
+    Route::get('/sync-member', [MemberController::class, 'syncApi'])->name('members.sync');
+    Route::get('/members/export/excel', [MemberController::class, 'exportExcel'])->name('members.export.excel');
+    Route::get('/members/export/pdf', [MemberController::class, 'exportPdf'])->name('members.export.pdf');
 
     // Fitur Kelola Pengguna (Full CRUD)
     Route::prefix('users')->group(function () {
@@ -75,4 +77,11 @@ Route::middleware('auth')->group(function () {
     Route::post('/mr/checkout/{id}', [DashboardController::class, 'checkOutStore'])->name('mr.checkout.store');
     // Fitur Keluar Sistem
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+    // 💡 RUTE KHUSUS AUDIT & REKAPITULASI KUNJUNGAN HISTORIS (TABLE: tbtr_rkm)
+    Route::prefix('admin/rekap-kunjungan')->group(function () {
+        Route::get('/', [RekapKunjunganController::class, 'index'])->name('admin.rekap.index');
+        Route::get('/detail/{id}', [RekapKunjunganController::class, 'show'])->name('admin.rekap.detail');
+        Route::get('/export/excel', [RekapKunjunganController::class, 'exportExcel'])->name('admin.rekap.export.excel');
+        Route::get('/export/pdf', [RekapKunjunganController::class, 'exportPdf'])->name('admin.rekap.export.pdf');
+    });
 });

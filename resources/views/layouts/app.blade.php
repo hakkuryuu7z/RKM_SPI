@@ -193,6 +193,11 @@
                 </a>
             </li>
             <li class="nav-item">
+                <a href="{{ route('admin.rekap.index') }}" class="nav-link {{ request()->routeIs('admin.rekap.*') ? 'active' : '' }}">
+                    <i class="fa-solid fa-clock-rotate-left me-2"></i> Rekap Kunjungan Historis
+                </a>
+            </li>
+            <li class="nav-item">
                 <a href="{{ route('members.index') }}" class="nav-link {{ request()->routeIs('members.*') ? 'active' : '' }}">
                     <i class="fa-solid fa-users me-2"></i> Data Member
                 </a>
@@ -273,6 +278,11 @@
                     </a>
                 </li>
                 <li class="nav-item">
+                    <a href="{{ route('admin.rekap.index') }}" class="nav-link {{ request()->routeIs('admin.rekap.*') ? 'active' : '' }}">
+                        <i class="fa-solid fa-clock-rotate-left me-2"></i> Rekap Kunjungan Historis
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a href="{{ route('members.index') }}" class="nav-link {{ request()->routeIs('members.*') ? 'active' : '' }}">
                         <i class="fa-solid fa-users me-2"></i> Data Member
                     </a>
@@ -292,6 +302,7 @@
                         <i class="fa-solid fa-sliders me-2"></i> Parameter Validasi MR
                     </a>
                 </li>
+
                 @endif
             </ul>
         </div>

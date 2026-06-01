@@ -1,249 +1,339 @@
 @extends('layouts.app')
-<style>
-    /* Spasi atas bawah untuk Search dan Pagination */
-    div.dataTables_wrapper div.dataTables_filter,
-    div.dataTables_wrapper div.dataTables_length {
-        margin-bottom: 1.5rem;
-    }
-
-    div.dataTables_wrapper div.dataTables_info,
-    div.dataTables_wrapper div.dataTables_paginate {
-        margin-top: 1.5rem;
-    }
-
-    /* Percantik Input Search & Select Length */
-    .dataTables_wrapper .form-control,
-    .dataTables_wrapper .form-select {
-        border-radius: 8px;
-        border: 1px solid #e2e8f0;
-        padding: 0.4rem 1rem;
-        box-shadow: none;
-    }
-
-    .dataTables_wrapper .form-control:focus,
-    .dataTables_wrapper .form-select:focus {
-        border-color: #0ea5e9;
-        box-shadow: 0 0 0 0.25rem rgba(14, 165, 233, 0.15);
-    }
-
-    /* Percantik Tombol Pagination (Warna Ocean) */
-    .page-item.active .page-link {
-        background-color: #0c4a6e !important;
-        border-color: #0c4a6e !important;
-        color: white !important;
-        border-radius: 6px;
-    }
-
-    .page-link {
-        color: #0c4a6e;
-        border-radius: 6px;
-        margin: 0 3px;
-        border: 1px solid #f1f5f9;
-    }
-
-    .page-link:hover {
-        background-color: #f0f9ff;
-        color: #0ea5e9;
-    }
-</style>
-@section('title', 'Data Member Relasi')
 
 @section('content')
-<div class="container-fluid px-0">
+<div class="container-fluid px-4 py-3">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h4 class="fw-bold mb-0" style="color: #0c4a6e;">Data Member</h4>
-            <p class="text-muted small mb-0">Sinkronisasi data otomatis dari server pusat.</p>
+            <h4 class="fw-bold mb-0 text-dark">Data Master Member</h4>
+            <small class="text-muted">Manajemen basis data outlet, segmentasi, dan koordinat posisi member retail</small>
         </div>
-
-        <a href="{{ route('member.sync') }}" id="btnSync" data-turbo="false" wire:navigate.hover="false" wire:navigate="false" class="btn btn-primary d-flex align-items-center gap-2 px-4 shadow-sm" style="background-color: #0c4a6e; border: none; border-radius: 8px;">
-            <span>🔄</span> Tarik Data API
-        </a>
+        <div>
+            <a href="{{ route('members.sync') }}" id="btn-sync-api" class="btn btn-primary fw-semibold shadow-sm px-3 py-2">
+                <i class="fa-solid fa-rotate me-2"></i> Sinkronisasi API Pusat
+            </a>
+        </div>
     </div>
 
-    <div class="card border-0 rounded-4 shadow-sm">
-        <div class="card-body p-4">
+    <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-body p-3">
+            <form action="{{ route('members.index') }}" method="GET" class="row g-3 align-items-center">
+                <div class="col-12 col-md-4">
+                    <div class="input-group">
+                        <span class="input-group-text bg-light border-end-0 text-secondary">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                        </span>
+                        <input type="text" name="search" class="form-control bg-light border-start-0 ps-0 text-dark"
+                            placeholder="Cari kode, nama, kota, atau salesman..." value="{{ $search ?? '' }}">
+                    </div>
+                </div>
+                <div class="col-12 col-md-3">
+                    <button type="submit" class="btn btn-dark fw-semibold px-3">
+                        <i class="fa-solid fa-filter me-1"></i> Terapkan Filter
+                    </button>
+                    @if(!empty($search))
+                    <a href="{{ route('members.index') }}" class="btn btn-light border fw-semibold ms-1">
+                        Reset
+                    </a>
+                    @endif
+                </div>
+                <div class="col-12 col-md-5 text-md-end">
+                    <span class="text-muted small me-2 d-none d-xl-inline-block">Format Ekspor Dokumen:</span>
+                    <a href="{{ route('members.export.excel', ['search' => $search]) }}" class="btn btn-sm btn-success fw-semibold px-3 py-2 shadow-sm rounded-2">
+                        <i class="fa-solid fa-file-excel me-2"></i> Unduh Excel
+                    </a>
+                    <a href="{{ route('members.export.pdf', ['search' => $search]) }}" target="_blank" class="btn btn-sm btn-danger fw-semibold px-3 py-2 shadow-sm rounded-2 ms-1">
+                        <i class="fa-solid fa-file-pdf me-2"></i> Cetak PDF
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-body p-3">
             <div class="table-responsive">
-                <table id="tableMember" class="table table-hover align-middle mb-0" style="width:100%">
-                    <thead class="table-light">
+                <table class="table table-hover align-middle mb-0 text-nowrap" id="table-master-members">
+                    <thead class="table-light text-secondary small text-uppercase">
                         <tr>
-                            <th width="10%">KODE</th>
-                            <th width="30%">NAMA TOKO / MEMBER</th>
-                            <th width="20%">KOTA</th>
-                            <th width="20%">KONTAK (HP)</th>
-                            <th width="10%">STATUS</th>
-                            <th width="10%" class="text-center">AKSI</th>
+                            <th class="ps-3">No.</th>
+                            <th>Kode Member</th>
+                            <th>Nama Member / Outlet</th>
+                            <th>Wilayah & Alamat</th>
+                            <th>No. Salesman</th>
+                            <th class="text-center">Koordinat GPS</th>
+                            <th class="text-center">Status</th>
+                            <th class="text-center">Aksi</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        @foreach($members as $m)
+                    <tbody class="small">
+                        @forelse($members as $index => $member)
                         <tr>
-                            <td class="text-muted fw-bold">{{ $m->kode }}</td>
-                            <td class="fw-semibold text-dark">{{ $m->nama }}</td>
-                            <td class="text-muted">{{ $m->kota }}</td>
-                            <td class="text-muted">{{ $m->hp }}</td>
+                            <td class="ps-3 text-secondary fw-medium">
+                                {{ $members->firstItem() + $index }}
+                            </td>
                             <td>
-                                @if(strtoupper($m->status) == 'AKTIF')
-                                <span class="badge bg-success-subtle text-success border border-success px-2 py-1">AKTIF</span>
+                                <span class="badge bg-primary-subtle text-primary fw-bold px-2 py-1 rounded">
+                                    {{ $member->kode }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="fw-bold text-dark">{{ $member->nama }}</div>
+                                <small class="text-muted d-block">
+                                    {{ $member->nama_outlet ?? 'Sub Outlet: ' . ($member->nama_sub_outlet ?? '-') }}
+                                </small>
+                            </td>
+                            <td>
+                                <div class="text-wrap text-secondary" style="max-width: 260px;">{{ $member->alamat }}</div>
+                                <small class="text-muted fw-semibold">{{ $member->kecamatan ?? '-' }}, {{ $member->kota }}</small>
+                            </td>
+                            <td>
+                                <span class="text-dark fw-medium">{{ $member->cus_nosalesman ?? '-' }}</span>
+                            </td>
+                            <td class="text-center">
+                                @if($member->lat && $member->lng)
+                                <a href="https://www.google.com/maps/search/?api=1&query={{ $member->lat }},{{ $member->lng }}" target="_blank" class="btn btn-sm btn-outline-success rounded-pill px-2 py-1">
+                                    <i class="fa-solid fa-location-dot me-1"></i> Terpeta ({{ $member->jarak ?? 0 }}m)
+                                </a>
                                 @else
-                                <span class="badge bg-danger-subtle text-danger border border-danger px-2 py-1">{{ $m->status }}</span>
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2 py-1">
+                                    <i class="fa-solid fa-unlink me-1"></i> Belum Ada Titik
+                                </span>
                                 @endif
                             </td>
                             <td class="text-center">
-                                <button type="button" class="btn btn-sm btn-light text-primary fw-bold" data-bs-toggle="modal" data-bs-target="#detailModal{{ $m->kode }}">
-                                    Detail
+                                @if(strtoupper($member->status) == 'AKTIF' || strtoupper($member->status) == 'A')
+                                <span class="badge bg-success rounded-pill px-3 py-1 fw-bold">AKTIF</span>
+                                @else
+                                <span class="badge bg-secondary rounded-pill px-3 py-1 fw-bold">NON-AKTIF</span>
+                                @endif
+                            </td>
+                            <td class="text-center">
+                                <button type="button"
+                                    class="btn btn-sm btn-light border rounded-pill px-3 btn-view-detail"
+                                    data-kode="{{ $member->kode }}"
+                                    data-nama="{{ $member->nama }}"
+                                    data-status="{{ $member->status }}"
+                                    data-outlet="{{ $member->nama_outlet ?? '-' }}"
+                                    data-suboutlet="{{ $member->nama_sub_outlet ?? '-' }}"
+                                    data-alamat="{{ $member->alamat }}"
+                                    data-alamat2="{{ $member->alamat_2 ?? '-' }}"
+                                    data-kota="{{ $member->kota }}"
+                                    data-kecamatan="{{ $member->kecamatan ?? '-' }}"
+                                    data-kelurahan="{{ $member->kelurahan ?? '-' }}"
+                                    data-telepon="{{ $member->telepon ?? '-' }}"
+                                    data-hp="{{ $member->hp ?? '-' }}"
+                                    data-cp1="{{ $member->contact_person1 ?? '-' }}"
+                                    data-cp2="{{ $member->contact_person2 ?? '-' }}"
+                                    data-salesman="{{ $member->cus_nosalesman ?? '-' }}"
+                                    data-segmen="{{ $member->nama_segmen ?? '-' }}"
+                                    data-registrasi="{{ $member->tgl_registrasi ? \Carbon\Carbon::parse($member->tgl_registrasi)->format('d-m-Y H:i:s') : '-' }}"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#modalDetailMember">
+                                    <i class="fa-solid fa-circle-info text-primary me-1"></i> Detail
                                 </button>
-
-                                <div class="modal fade" id="detailModal{{ $m->kode }}" tabindex="-1" aria-hidden="true">
-                                    <div class="modal-dialog modal-dialog-centered modal-lg">
-                                        <div class="modal-content border-0 shadow-lg rounded-4 text-start">
-                                            <div class="modal-header border-0 pt-4 px-4 pb-0">
-                                                <h5 class="fw-bold" style="color: #0c4a6e;">Detail Member</h5>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                            </div>
-                                            <div class="modal-body p-4">
-                                                <div class="row g-3">
-                                                    <div class="col-md-6">
-                                                        <p class="text-muted small mb-1 text-uppercase fw-semibold">Nama Toko / Member</p>
-                                                        <h6 class="fw-bold text-dark">{{ $m->nama }}</h6>
-                                                    </div>
-                                                    <div class="col-md-6">
-                                                        <p class="text-muted small mb-1 text-uppercase fw-semibold">Kode Member</p>
-                                                        <h6 class="fw-bold text-dark">{{ $m->kode }} <span class="badge bg-light text-dark ms-2">{{ $m->status }}</span></h6>
-                                                    </div>
-
-                                                    <div class="col-md-6">
-                                                        <p class="text-muted small mb-1 text-uppercase fw-semibold">No. KTP</p>
-                                                        <h6 class="fw-bold text-dark">{{ $m->no_ktp ?? '-' }}</h6>
-                                                    </div>
-                                                    <div class="col-md-6">
-                                                        <p class="text-muted small mb-1 text-uppercase fw-semibold">Kontak (HP)</p>
-                                                        <h6 class="fw-bold text-dark">{{ $m->hp ?? '-' }}</h6>
-                                                    </div>
-
-                                                    <div class="col-12">
-                                                        <hr class="text-muted opacity-25 my-2">
-                                                    </div>
-
-                                                    <div class="col-md-12">
-                                                        <p class="text-muted small mb-1 text-uppercase fw-semibold">Alamat Lengkap</p>
-                                                        <h6 class="fw-bold text-dark lh-base">
-                                                            {{ $m->alamat }}, Kel. {{ $m->kelurahan }}, Kec. {{ $m->kecamatan }}<br>
-                                                            {{ $m->kota }} - {{ $m->kode_pos }}
-                                                        </h6>
-                                                    </div>
-
-                                                    <div class="col-md-6">
-                                                        <p class="text-muted small mb-1 text-uppercase fw-semibold">Tipe Outlet</p>
-                                                        <h6 class="fw-bold text-dark">{{ $m->nama_outlet ?? '-' }} ({{ $m->nama_sub_outlet ?? '-' }})</h6>
-                                                    </div>
-                                                    <div class="col-md-6">
-                                                        <p class="text-muted small mb-1 text-uppercase fw-semibold">No. Salesman</p>
-                                                        <h6 class="fw-bold text-dark">
-                                                            <span class="badge bg-warning-subtle text-warning border border-warning px-2 py-1">
-                                                                {{ $m->cus_nosalesman ?? 'TIDAK ADA' }}
-                                                            </span>
-                                                        </h6>
-                                                    </div>
-                                                    <div class="col-md-6">
-                                                        <p class="text-muted small mb-1 text-uppercase fw-semibold">Radius Jarak</p>
-                                                        <h6 class="fw-bold text-dark">
-                                                            {{ $m->jarak ? $m->jarak . ' KM' : '-' }}
-                                                        </h6>
-                                                    </div>
-                                                    <div class="col-md-12 mt-3">
-                                                        <p class="text-muted small mb-1 text-uppercase fw-semibold">Titik Koordinat</p>
-                                                        <h6 class="fw-bold text-dark">
-                                                            <a href="https://www.google.com/maps/search/?api=1&query={{ $m->lat }},{{ $m->lng }}" target="_blank" class="text-decoration-none" style="color: #0ea5e9;">
-                                                                📍 {{ $m->lat }}, {{ $m->lng }}
-                                                            </a>
-                                                        </h6>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="modal-footer border-0 pb-4 px-4 pt-0">
-                                                <button type="button" class="btn btn-light rounded-3 px-4 fw-medium" data-bs-dismiss="modal">Tutup</button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
                             </td>
                         </tr>
-                        @endforeach
+                        @empty
+                        <tr>
+                            <td colspan="8" class="text-center py-5 text-muted">
+                                <i class="fa-solid fa-users-slash d-block fa-3x mb-3 text-secondary"></i>
+                                Tidak ditemukan data member yang sesuai dengan parameter pencarian Anda.
+                            </td>
+                        </tr>
+                        @endforelse
                     </tbody>
                 </table>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mt-4 px-2">
+                <div class="text-muted small">
+                    Menampilkan {{ $members->firstItem() ?? 0 }} sampai {{ $members->lastItem() ?? 0 }} dari total {{ $members->total() }} data member.
+                </div>
+                <div>
+                    {{ $members->links('pagination::bootstrap-5') }}
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalDetailMember" tabindex="-1" aria-labelledby="modalDetailMemberLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-light border-0 py-3">
+                <h5 class="modal-title fw-bold text-dark" id="modalDetailMemberLabel">
+                    <i class="fa-solid fa-store text-primary me-2"></i>Informasi Rinci Member / Outlet
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="text-muted small fw-semibold d-block mb-1">Kode Member Master</label>
+                        <div class="fw-bold text-primary p-2 bg-light rounded" id="md-kode">-</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-muted small fw-semibold d-block mb-1">Status Keaktifan</label>
+                        <div class="fw-bold p-2 bg-light rounded" id="md-status">-</div>
+                    </div>
+                    <div class="col-md-12">
+                        <label class="text-muted small fw-semibold d-block mb-1">Nama Member / Pelanggan</label>
+                        <div class="fw-bold text-dark border-bottom pb-2 fs-6" id="md-nama">-</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-muted small fw-semibold d-block mb-1">Nama Struktur Outlet</label>
+                        <div class="text-secondary" id="md-outlet">-</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-muted small fw-semibold d-block mb-1">Nama Sub-Outlet</label>
+                        <div class="text-secondary" id="md-suboutlet">-</div>
+                    </div>
+
+                    <hr class="text-muted my-3">
+
+                    <div class="col-md-12">
+                        <label class="text-muted small fw-semibold d-block mb-1">Alamat Utama (Lokasi Distribusi)</label>
+                        <div class="text-dark fw-medium" id="md-alamat">-</div>
+                    </div>
+                    <div class="col-md-12">
+                        <label class="text-muted small fw-semibold d-block mb-1">Alamat Sekunder (Alternatif)</label>
+                        <div class="text-secondary" id="md-alamat2">-</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted small fw-semibold d-block mb-1">Kelurahan</label>
+                        <div class="text-dark" id="md-kelurahan">-</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted small fw-semibold d-block mb-1">Kecamatan</label>
+                        <div class="text-dark" id="md-kecamatan">-</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted small fw-semibold d-block mb-1">Kota / Kabupaten</label>
+                        <div class="text-dark" id="md-kota">-</div>
+                    </div>
+
+                    <hr class="text-muted my-3">
+
+                    <div class="col-md-4">
+                        <label class="text-muted small fw-semibold d-block mb-1">No. Telepon Rumah</label>
+                        <div class="text-dark" id="md-telepon">-</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted small fw-semibold d-block mb-1">No. Handphone (HP)</label>
+                        <div class="text-dark fw-bold" id="md-hp">-</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted small fw-semibold d-block mb-1">No. Salesman Terkait</label>
+                        <div class="text-dark" id="md-salesman">-</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted small fw-semibold d-block mb-1">Contact Person 1</label>
+                        <div class="text-secondary" id="md-cp1">-</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted small fw-semibold d-block mb-1">Contact Person 2</label>
+                        <div class="text-secondary" id="md-cp2">-</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted small fw-semibold d-block mb-1">Klasifikasi Segmen</label>
+                        <div class="badge bg-secondary-subtle text-secondary px-2 py-1" id="md-segmen">-</div>
+                    </div>
+                    <div class="col-md-12">
+                        <label class="text-muted small fw-semibold d-block mb-1">Waktu Hubung Registrasi Sistem</label>
+                        <div class="text-muted small" id="md-registrasi">-</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light border-0 py-2">
+                <button type="button" class="btn btn-secondary btn-sm rounded-pill px-4" data-bs-dismiss="modal">Tutup Jendela</button>
             </div>
         </div>
     </div>
 </div>
-@endsection
 
-@push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 <script>
-    // 1. Gabungin semua ke satu fungsi sakti
-    function jalankanSemuaFitur() {
+    document.addEventListener("DOMContentLoaded", function() {
 
-        // --- A. URUSAN DATATABLES ---
-        // Kalau tabel udah pernah jadi DataTables sebelumnya, hancurin dulu biar gak error, baru bikin ulang
-        if ($.fn.DataTable.isDataTable('#tableMember')) {
-            $('#tableMember').DataTable().destroy();
+        // INTERSEPTOR LOADING ANIMATION UNTUK SINKRONISASI API
+        const btnSync = document.getElementById('btn-sync-api');
+        if (btnSync) {
+            btnSync.addEventListener('click', function(e) {
+                e.preventDefault();
+                const targetUrl = this.getAttribute('href');
+
+                Swal.fire({
+                    title: 'Proses Sinkronisasi',
+                    text: 'Sedang mengunduh dan memperbarui data master koordinat member dari API pusat. Mohon tidak menutup jendela atau memuat ulang halaman ini.',
+                    icon: 'info',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    showConfirmButton: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                window.location.href = targetUrl;
+            });
         }
 
-        $('#tableMember').DataTable({
-            language: {
-                url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/id.json'
-            },
-            pageLength: 10,
-            ordering: true,
-            responsive: true
-        });
-
-        // --- B. URUSAN SWEETALERT ---
-        // Ganti bagian SweetAlert lu jadi begini:
+        // POPUP ALERT BERHASIL
         @if(session('success'))
         Swal.fire({
             icon: 'success',
-            title: 'Mantap!',
-            text: @json(session('success')),
-            timer: 3000,
-            showConfirmButton: false
+            title: 'Sinkronisasi Berhasil',
+            text: "{!! session('success') !!}",
+            confirmButtonColor: '#198754',
+            confirmButtonText: 'Selesai'
         });
         @endif
 
+        // POPUP ALERT GAGAL
         @if(session('error'))
         Swal.fire({
             icon: 'error',
-            title: 'Gagal!',
-            text: @json(session('error'))
+            title: 'Sinkronisasi Gagal',
+            text: "{!! session('error') !!}",
+            confirmButtonColor: '#dc3545',
+            confirmButtonText: 'Kembali'
         });
         @endif
-    }
 
-    // 2. Panggil fungsi sakti tadi di SEMUA KONDISI BROWSER
+        // MAPPING DATA ATTRIBUTES KE MODAL DETAIL
+        const modalDetail = document.getElementById('modalDetailMember');
+        if (modalDetail) {
+            modalDetail.addEventListener('show.bs.modal', function(event) {
+                const button = event.relatedTarget;
 
-    // Kondisi 1: Pas pertama kali buka web / Refresh F5
-    $(document).ready(function() {
-        jalankanSemuaFitur();
+                document.getElementById('md-kode').textContent = button.getAttribute('data-kode');
+                document.getElementById('md-nama').textContent = button.getAttribute('data-nama');
+                document.getElementById('md-outlet').textContent = button.getAttribute('data-outlet');
+                document.getElementById('md-suboutlet').textContent = button.getAttribute('data-suboutlet');
+                document.getElementById('md-alamat').textContent = button.getAttribute('data-alamat');
+                document.getElementById('md-alamat2').textContent = button.getAttribute('data-alamat2');
+                document.getElementById('md-kelurahan').textContent = button.getAttribute('data-kelurahan');
+                document.getElementById('md-kecamatan').textContent = button.getAttribute('data-kecamatan');
+                document.getElementById('md-kota').textContent = button.getAttribute('data-kota');
+                document.getElementById('md-telepon').textContent = button.getAttribute('data-telepon');
+                document.getElementById('md-hp').textContent = button.getAttribute('data-hp');
+                document.getElementById('md-salesman').textContent = button.getAttribute('data-salesman');
+                document.getElementById('md-cp1').textContent = button.getAttribute('data-cp1');
+                document.getElementById('md-cp2').textContent = button.getAttribute('data-cp2');
+                document.getElementById('md-segmen').textContent = button.getAttribute('data-segmen');
+                document.getElementById('md-registrasi').textContent = button.getAttribute('data-registrasi');
+
+                const statusValue = button.getAttribute('data-status').toUpperCase();
+                const mdStatus = document.getElementById('md-status');
+                if (statusValue === 'AKTIF' || statusValue === 'A') {
+                    mdStatus.textContent = 'AKTIF';
+                    mdStatus.className = 'fw-bold p-2 rounded bg-success-subtle text-success d-inline-block';
+                } else {
+                    mdStatus.textContent = 'NON-AKTIF';
+                    mdStatus.className = 'fw-bold p-2 rounded bg-secondary-subtle text-secondary d-inline-block';
+                }
+            });
+        }
     });
-
-    // Kondisi 2: Pas pindah menu pakai Livewire / Turbolinks / Turbo
-    document.addEventListener('livewire:navigated', jalankanSemuaFitur);
-    document.addEventListener('turbo:load', jalankanSemuaFitur);
-    document.addEventListener('turbolinks:load', jalankanSemuaFitur);
-
-    // 3. Efek Loading Tombol Sync tetep biarin di sini
-    const btnSync = document.getElementById('btnSync');
-    if (btnSync) {
-        btnSync.addEventListener('click', function() {
-            this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Menarik Data...';
-            this.classList.add('disabled');
-        });
-    }
 </script>
-@endpush
+@endsection

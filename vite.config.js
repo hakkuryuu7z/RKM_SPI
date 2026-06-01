@@ -14,7 +14,7 @@ export default defineConfig({
         host: '0.0.0.0',
         cors: true,
         hmr: {
-            host: '10.48.232.187', // ⚠️ GANTI pake IP address laptop lu yang didapet dari ipconfig tadi!
+            host: '10.88.79.193', // ⚠️ GANTI pake IP address laptop lu yang didapet dari ipconfig tadi!
         },
     },
 });

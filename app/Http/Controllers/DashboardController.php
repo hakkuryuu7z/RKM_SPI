@@ -2,86 +2,110 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Setting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Models\JalurMr;
+use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
-use App\Models\TrRkm;
 
 class DashboardController extends Controller
 {
+    /**
+     * Menampilkan Halaman Utama Dashboard Berdasarkan Hak Akses Pengguna
+     */
     public function index()
     {
-        /** @var \App\Models\User $user */
+        $hariIni = now()->toDateString();
         $user = Auth::user();
 
-        // Panggil paksa relasi role 
-        $user->load('role');
-
-        // Cek jika levelnya 4 (MR)
+        // 📋 VALIDASI ROLE LEVEL: Memeriksa tingkat otoritas level 4 (Marketing Representative)
         if ($user->role && $user->role->role_level == 4) {
 
-            $hariIni = \Carbon\Carbon::now('Asia/Jakarta')->format('Y-m-d');
-
+            // =================================================================
+            // PANEL UTAMA: MARKETING REPRESENTATIVE (MR) - LEVEL 4
+            // =================================================================
             $tugasHariIni = \App\Models\JalurMr::with('member')
                 ->where('jlr_user_id', $user->user_id)
                 ->where('jlr_tanggal_rkm', $hariIni)
                 ->get();
 
+            $kunjungan = \App\Models\TrRkm::where('rkm_user_id', $user->user_id)
+                ->where('rkm_tanggal', $hariIni)
+                ->get()
+                ->keyBy('rkm_jlr_id');
+
+            foreach ($tugasHariIni as $tugas) {
+                $statusData = $kunjungan->get($tugas->jlr_id);
+
+                $tugas->status_hari_ini = $statusData ? $statusData->status_kunjungan : 'BELUM';
+                $tugas->jam_masuk_hari_ini = $statusData ? $statusData->waktu_checkin : null;
+            }
+
             return view('mr.dashboard', compact('tugasHariIni', 'hariIni'));
+        } else {
+
+            // =================================================================
+            // PANEL UTAMA: MANAGEMENT / MONITORING (ADMIN, SPV, MONITOR - LEVEL 1, 2, 3)
+            // =================================================================
+
+            // 1. Menarik seluruh data rute perencanaan dari semua personil MR pada hari berjalan
+            $allTugas = \App\Models\JalurMr::with(['member', 'user'])
+                ->where('jlr_tanggal_rkm', $hariIni)
+                ->get();
+
+            // 2. Menarik seluruh data realisasi kunjungan pada hari berjalan dari tabel tbtr_rkm
+            $allKunjungan = \App\Models\TrRkm::where('rkm_tanggal', $hariIni)
+                ->get()
+                ->keyBy('rkm_jlr_id');
+
+            // 3. Rekapitulasi metrik statistik pemantauan
+            $metrics = [
+                'total_tugas' => $allTugas->count(),
+                'total_checkout' => 0,
+                'total_checkin' => 0,
+                'total_belum' => 0,
+            ];
+
+            // 4. Proses pemetaan status pergerakan personil lapangan
+            foreach ($allTugas as $tugas) {
+                $statusData = $allKunjungan->get($tugas->jlr_id);
+                $status = $statusData ? $statusData->status_kunjungan : 'BELUM';
+
+                $tugas->status_hari_ini = $status;
+                $tugas->jam_masuk_hari_ini = $statusData ? $statusData->waktu_checkin : null;
+                $tugas->jam_keluar_hari_ini = $statusData ? $statusData->waktu_checkout : null;
+
+                if ($status === 'CHECKOUT') {
+                    $metrics['total_checkout']++;
+                } elseif ($status === 'CHECKIN') {
+                    $metrics['total_checkin']++;
+                } else {
+                    $metrics['total_belum']++;
+                }
+            }
+
+            // Mengarahkan pengguna manajemen ke halaman dashboard monitoring global
+            return view('admin.dashboard', compact('allTugas', 'hariIni', 'metrics'));
         }
-
-        // Kalau Admin / SPV, masuk ke sini
-        return view('dashboard');
     }
-    public function detailToko($id)
+
+    /**
+     * Tampilan Detail Formulir Kunjungan Toko (Khusus Akses MR)
+     */
+    public function detail($id)
     {
-        // 1. Ambil data master jalur tugas si MR beserta relasi member/tokonya
         $tugas = \App\Models\JalurMr::with('member')->findOrFail($id);
+        $setting = DB::table('tbmaster_setting')->first();
 
-        // 2. Ambil parameter radius & menit dari settingan admin
-        $setting = \App\Models\Setting::first();
-
-        // 3. 🔎 CARI DATA KUNJUNGAN HARI INI (INI DIA YANG KETINGGALAN BOLO!)
-        $kunjungan = \App\Models\TrRkm::where('rkm_jlr_id', $tugas->getKey())
+        $kunjungan = \App\Models\TrRkm::where('rkm_jlr_id', $tugas->jlr_id)
             ->where('rkm_tanggal', now()->toDateString())
             ->first();
 
-        // 4. Kirim semua variabel ke view lewat compact()
-        // Pastiin ada tulisan 'kunjungan' di dalem compact ya!
         return view('mr.detail', compact('tugas', 'setting', 'kunjungan'));
     }
-    // Fungsi 1: Tampilkan Form Pengaturan
-    public function settingForm()
-    {
-        // Proteksi: Kalau level 4 (MR) gak boleh masuk, tendang!
-        if (Auth::user()->role && Auth::user()->role->role_level == 4) {
-            abort(403, 'Halaman ini khusus Admin bolo!');
-        }
 
-        // Ambil baris pertama dari tabel setting
-        $setting = Setting::first();
-
-        return view('admin.setting', compact('setting'));
-    }
-
-    // Fungsi 2: Proses Simpan Hasil Update Form
-    public function settingUpdate(Request $request)
-    {
-        $request->validate([
-            'radius_meter' => 'required|numeric|min:1',
-            'minimal_menit' => 'required|numeric|min:1',
-        ]);
-
-        $setting = Setting::first();
-        $setting->update([
-            'radius_meter' => $request->radius_meter,
-            'minimal_menit' => $request->minimal_menit,
-        ]);
-
-        return redirect()->back()->with('success', 'Pengaturan Validasi MR Berhasil Diperbarui!');
-    }
+    /**
+     * Menyimpan Data Realisasi Check-In Lokasi Toko
+     */
     public function checkInStore(Request $request, $id)
     {
         $request->validate([
@@ -89,72 +113,144 @@ class DashboardController extends Controller
             'lng_mr' => 'required',
         ]);
 
-        // 1. Ambil data master jalur dan relasi member-nya
         $tugas = \App\Models\JalurMr::with('member')->findOrFail($id);
 
         if ($tugas->jlr_user_id != Auth::user()->user_id) {
-            abort(403, 'Akses ilegal bolo!');
+            abort(403, 'Akses tidak sah.');
         }
 
-        // 2. Eksekusi simpan/update ke tabel tbtr_rkm
         \App\Models\TrRkm::updateOrCreate(
             [
-                'rkm_jlr_id'   => $tugas->getKey(),
-                'rkm_tanggal'  => now()->toDateString(), // Mengunci tanggal hari ini
+                'rkm_jlr_id'   => $tugas->jlr_id,
+                'rkm_tanggal'  => now()->toDateString(),
             ],
             [
                 'rkm_user_id'       => Auth::user()->user_id,
                 'rkm_nama_member'   => $tugas->member ? $tugas->member->nama : 'Toko Tanpa Nama',
                 'rkm_kodemember'    => $tugas->jlr_kodemember,
-                'waktu_checkin'     => now(), // Jam check-in saat ini
+                'waktu_checkin'     => now(),
                 'lat_kunjungan'     => $request->lat_mr,
                 'lng_kunjungan'     => $request->lng_mr,
-                'status_kunjungan'  => 'CHECKIN', // Mengubah status bawaan 'BELUM' jadi 'CHECKIN'
+                'status_kunjungan'  => 'CHECKIN',
             ]
         );
 
-        return redirect()->back()->with('success', 'Berhasil Check-In! Selamat bekerja bolo! 🔥');
+        return redirect()->back()->with('success', 'Proses Check-In berhasil tercatat.');
     }
+
+    /**
+     * Menyimpan Data Laporan Akhir Kunjungan (Check-Out) disertai Kompresi Citra
+     */
     public function checkOutStore(Request $request, $id)
     {
-        //dd($request->all(), $id);
-        // 1. Validasi murni tipe file gambar biasa
         $request->validate([
             'rkm_order_status'     => 'required',
             'rkm_keteranganmember' => 'required',
-            'foto_kunjungan'       => 'required|image|mimes:jpg,jpeg,png|max:10240'
+            // 💡 Validasi disesuaikan untuk menerima tipe data struktur array
+            'foto_kunjungan'       => 'required|array',
+            'foto_kunjungan.*'     => 'image|mimes:jpg,jpeg,png|max:10240'
         ]);
 
         $kunjungan = \App\Models\TrRkm::findOrFail($id);
-        $setting = \App\Models\Setting::first();
+        $setting = DB::table('tbmaster_setting')->first();
 
-        // ⏱️ Hitung durasi diam (dwell time)
-        $waktuCheckin = \Carbon\Carbon::parse($kunjungan->waktu_checkin);
+        $waktuCheckin = Carbon::parse($kunjungan->waktu_checkin);
         $durasiMenit = $waktuCheckin->diffInMinutes(now());
 
-        if ($request->rkm_order_status != 'Tutup' && $durasiMenit < ($setting->minimal_menit ?? 15)) {
-            $sisaMenit = ($setting->minimal_menit ?? 15) - $durasiMenit;
-            return redirect()->back()->with('error', "Gagal Check-Out! Harus nunggu {$sisaMenit} menit lagi bolo.");
+        if ($request->rkm_order_status != 'Tutup' && $durasiMenit < ($setting?->minimal_menit ?? 15)) {
+            $sisaMenit = ($setting?->minimal_menit ?? 15) - $durasiMenit;
+            return redirect()->back()->with('error', "Batas minimal durasi kunjungan belum terpenuhi. Silakan tunggu sekitar {$sisaMenit} menit lagi.");
         }
 
-        // 📸 PROSES UPLOAD FILE (BAIK DARI KAMERA ATAUPUN GALERI)
-        $namaFoto = null;
+        // Logika pemrosesan perulangan file foto massal
+        $arrayNamaFoto = [];
         if ($request->hasFile('foto_kunjungan')) {
-            $file = $request->file('foto_kunjungan');
-            $namaFoto = 'RKM_' . time() . '.' . $file->getClientOriginalExtension();
-            $file->move(public_path('uploads/kunjungan'), $namaFoto); // Pindah ke folder laptop
+            $destinationPath = public_path('uploads/kunjungan');
+
+            foreach ($request->file('foto_kunjungan') as $index => $file) {
+                $namaFoto = 'RKM_' . time() . '_' . $index . '.jpg';
+                $this->compressAndSaveImage($file, $destinationPath, $namaFoto, 40);
+                $arrayNamaFoto[] = $namaFoto;
+            }
         }
 
-        // 📝 Update laporan akhir ke database
         $kunjungan->update([
             'rkm_order_status'     => $request->rkm_order_status == 'Tutup' ? 'Tidak' : $request->rkm_order_status,
             'rkm_keteranganmember' => $request->rkm_keteranganmember,
             'rkm_trx'              => $request->rkm_trx,
             'waktu_checkout'       => now(),
-            'foto_kunjungan'       => $namaFoto,
+            // 💡 Menyimpan nama-nama file sebagai teks JSON murni atau teks pisahan koma ke database
+            'foto_kunjungan'       => json_encode($arrayNamaFoto),
             'status_kunjungan'     => 'CHECKOUT'
         ]);
 
-        return redirect()->route('dashboard')->with('success', 'Kunjungan toko berhasil dilaporkan bolo! Mantap! 🚀');
+        return redirect()->route('dashboard')->with('success', 'Laporan kunjungan lapangan berhasil diunggah.');
+    }
+    /**
+     * Menampilkan Halaman Parameter Pengaturan Validasi (Akses Manajemen)
+     */
+    public function settingForm()
+    {
+        $user = Auth::user();
+
+        // 📋 VALIDASI ROLE LEVEL: Proteksi akses halaman berdasarkan tingkatan level 4
+        if ($user->role && $user->role->role_level == 4) {
+            abort(403, 'Akses ditolak. Halaman ini memerlukan hak akses Administrator.');
+        }
+
+        $setting = DB::table('tbmaster_setting')->first();
+        return view('admin.setting', compact('setting'));
+    }
+
+    /**
+     * Memperbarui Data Parameter Validasi Radius & Durasi Waktu
+     */
+    public function settingUpdate(Request $request)
+    {
+        $request->validate([
+            'radius_meter' => 'required|numeric|min:1',
+            'minimal_menit' => 'required|numeric|min:1',
+        ]);
+
+        DB::table('tbmaster_setting')->where('id', 1)->update([
+            'radius_meter' => $request->radius_meter,
+            'minimal_menit' => $request->minimal_menit,
+        ]);
+
+        return redirect()->back()->with('success', 'Konfigurasi validasi berhasil diperbarui.');
+    }
+
+    /**
+     * Fungsi Pendukung: Reduksi Ukuran Berkas Gambar Berbasis Ekstensi GD Native
+     */
+    private function compressAndSaveImage($file, $destinationPath, $namaFoto, $quality = 40)
+    {
+        $sourcePath = $file->getRealPath();
+        $targetFile = $destinationPath . '/' . $namaFoto;
+
+        if (!function_exists('imagecreatefromjpeg')) {
+            $file->move($destinationPath, $namaFoto);
+            return;
+        }
+
+        $info = getimagesize($sourcePath);
+
+        if ($info['mime'] == 'image/jpeg' || $info['mime'] == 'image/jpg') {
+            $image = imagecreatefromjpeg($sourcePath);
+        } elseif ($info['mime'] == 'image/png') {
+            $image = imagecreatefrompng($sourcePath);
+
+            $background = imagecreatetruecolor(imagesx($image), imagesy($image));
+            $white = imagecolorallocate($background, 255, 255, 255);
+            imagefill($background, 0, 0, $white);
+            imagecopy($background, $image, 0, 0, 0, 0, imagesx($image), imagesy($image));
+            $image = $background;
+        } else {
+            $file->move($destinationPath, $namaFoto);
+            return;
+        }
+
+        imagejpeg($image, $targetFile, $quality);
+        imagedestroy($image);
     }
 }

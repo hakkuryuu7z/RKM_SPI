@@ -30,4 +30,9 @@ class TrRkm extends Model
     // Karena lu pake custom nama untuk created_at & updated_at:
     const CREATED_AT = 'rkm_create_dt';
     const UPDATED_AT = 'rkm_modify_dt';
+    public function user()
+    {
+        // Parameter: Model Target, Foreign Key di tbtr_rkm, Primary Key di tbmaster_users
+        return $this->belongsTo(User::class, 'rkm_user_id', 'user_id');
+    }
 }

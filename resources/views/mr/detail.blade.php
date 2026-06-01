@@ -6,12 +6,27 @@
 
 @if(session('error'))
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener("DOMContentLoaded", function() {
         Swal.fire({
             icon: 'error',
-            title: 'Gagal Keluar!',
-            text: '{{ session('
-            error ') }}'
+            title: 'Gagal Keluar Toko!',
+            text: "{!! session('error') !!}",
+            confirmButtonColor: '#dc3545',
+            confirmButtonText: 'Mengerti'
+        });
+    });
+</script>
+@endif
+
+@if(session('success'))
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        Swal.fire({
+            icon: 'success',
+            title: 'Transaksi Berhasil!',
+            text: "{!! session('success') !!}",
+            confirmButtonColor: '#198754',
+            confirmButtonText: 'Ok'
         });
     });
 </script>
@@ -23,16 +38,18 @@
         Swal.fire({
             icon: 'error',
             title: 'Validasi Ditolak!',
-            text: '{{ $errors->first() }}'
+            text: '{{ $errors->first() }}',
+            confirmButtonColor: '#dc3545'
         });
     });
 </script>
 @endif
+
 <div class="container-fluid px-3 pb-5" style="max-width: 500px; margin: 0 auto;">
 
     <div class="mb-3 mt-2">
         <a href="{{ route('dashboard') }}" class="text-decoration-none text-secondary small fw-bold">
-            <i class="fa-solid fa-arrow-left me-1"></i> Kembali ke Rute
+            <i class="fa-solid fa-arrow-left me-1"></i> Kembali ke Rencana Rute
         </a>
     </div>
 
@@ -52,11 +69,11 @@
         @php $m = $tugas->member; @endphp
         <div class="d-flex flex-column gap-3 mt-2">
             <div>
-                <small class="text-muted d-block"><i class="fa-solid fa-barcode me-1"></i> Kode Member</small>
+                <small class="text-muted d-block"><i class="fa-solid fa-barcode me-1"></i> Kode Member Outlet</small>
                 <span class="fw-semibold text-dark">{{ $tugas->jlr_kodemember }}</span>
             </div>
             <div>
-                <small class="text-muted d-block"><i class="fa-solid fa-phone me-1"></i> No. HP Toko</small>
+                <small class="text-muted d-block"><i class="fa-solid fa-phone me-1"></i> Nomor Telepon Outlet</small>
                 @if($m && $m->hp)
                 <a href="tel:{{ $m->hp }}" class="text-decoration-none fw-semibold text-primary">{{ $m->hp }}</a>
                 @else
@@ -64,32 +81,40 @@
                 @endif
             </div>
             <div>
-                <small class="text-muted d-block"><i class="fa-solid fa-map-location-dot me-1"></i> Wilayah (Kelurahan)</small>
+                <small class="text-muted d-block"><i class="fa-solid fa-map-location-dot me-1"></i> Wilayah Teritorial (Kelurahan)</small>
                 <span class="fw-semibold text-dark">{{ $m && $m->kelurahan ? $m->kelurahan : '-' }}</span>
             </div>
-            <div>
-                <small class="text-muted d-block"><i class="fa-solid fa-location-dot me-1"></i> Koordinat Toko</small>
-                @if($m && $m->lat && $m->lng)
-                <span class="fw-semibold text-dark d-block small mb-2" id="target-koordinat">{{ $m->lat }},{{ $m->lng }}</span>
-                @else
-                <span class="fw-semibold text-muted d-block mt-1" id="target-koordinat">kosong</span>
-                @endif
+            <div class="mb-2">
+                <small class="text-muted d-block"><i class="fa-solid fa-location-crosshairs me-1"></i> Titik Koordinat Acuan</small>
+                <span class="fw-bold text-dark small" id="target-koordinat">
+                    {{ $m && $m->koordinat ? $m->koordinat : 'kosong' }}
+                </span>
             </div>
+
+            @if($m && $m->koordinat && $m->koordinat != 'kosong')
+            <div class="mt-3">
+                <a href="https://maps.google.com/?q={{ urlencode($m->koordinat) }}"
+                    target="_blank"
+                    class="btn btn-outline-danger btn-sm w-100 fw-bold rounded-2 pt-2 pb-2 shadow-sm">
+                    <i class="fa-solid fa-map-location-dot me-2"></i> Navigasi Google Maps
+                </a>
+            </div>
+            @endif
         </div>
     </div>
 
     @if(!$kunjungan || $kunjungan->status_kunjungan == 'BELUM')
     <div class="card border-0 rounded-4 shadow-sm bg-white p-4 text-center">
         <i class="fa-solid fa-location-crosshairs fa-2x text-primary mb-3"></i>
-        <h6 class="fw-bold text-dark">Validasi Lokasi GPS</h6>
-        <p class="small text-muted mb-4">Sistem akan mencocokkan lokasi GPS HP Anda dengan posisi toko saat ini.</p>
+        <h6 class="fw-bold text-dark">Validasi Geofencing Lokasi GPS</h6>
+        <p class="small text-muted mb-4">Sistem akan mencocokkan lokasi GPS perangkat Anda dengan radius posisi resmi outlet saat ini.</p>
 
         <form id="form-checkin" action="{{ route('mr.checkin.store', ['id' => $tugas->getKey()]) }}" method="POST">
             @csrf
             <input type="hidden" name="lat_mr" id="lat_mr">
             <input type="hidden" name="lng_mr" id="lng_mr">
 
-            <button type="button" id="btn-checkin" data-radius="{{ $setting->radius_meter ?? 50 }}" class="btn btn-primary w-100 py-3 rounded-3 fw-bold shadow-sm">
+            <button type="button" id="btn-checkin" data-radius="{{ $setting->radius_meter ?? 50 }}" class="btn btn-primary w-100 fw-bold rounded-2 pt-2 pb-2 shadow-sm">
                 <i class="fa-solid fa-right-to-bracket me-2"></i> MASUK TOKO (CHECK-IN)
             </button>
         </form>
@@ -99,41 +124,41 @@
     <div class="card border-0 rounded-4 shadow-sm bg-white p-4">
         <div class="alert alert-success border-0 rounded-3 d-flex align-items-center gap-2 mb-4" style="font-size: 0.85rem;">
             <i class="fa-solid fa-circle-check fa-lg"></i>
-            <div>Anda sudah Check-In pada jam <b>{{ \Carbon\Carbon::parse($kunjungan->waktu_checkin)->format('H:i') }} WIB</b></div>
+            <div>Konfirmasi: Anda telah melakukan Check-In pada pukul <b>{{ \Carbon\Carbon::parse($kunjungan->waktu_checkin)->format('H:i') }} WIB</b></div>
         </div>
 
-        <h6 class="fw-bold text-dark mb-3"><i class="fa-solid fa-file-pen me-1 text-primary"></i> Laporan Kunjungan Toko</h6>
+        <h6 class="fw-bold text-dark mb-3"><i class="fa-solid fa-file-pen me-1 text-primary"></i> Form Laporan Realisasi Kunjungan</h6>
 
-        <form action="{{ route('mr.checkout.store', $kunjungan->rkm_id) }}" method="POST" enctype="multipart/form-data">
+        <form id="form-checkout" action="{{ route('mr.checkout.store', $kunjungan->rkm_id) }}" method="POST" enctype="multipart/form-data">
             @csrf
 
             <div class="mb-3">
-                <label class="form-label small fw-bold text-secondary">Status Kunjungan / Order</label>
+                <label class="form-label small fw-bold text-secondary">Status Operasional / Hasil Order</label>
                 <select class="form-select" name="rkm_order_status" id="rkm_order_status" required>
-                    <option value="Order">Toko Buka & Ada Orderan</option>
-                    <option value="Tidak">Toko Buka & Tidak Ada Orderan</option>
-                    <option value="Tutup">⚠️ Toko Tutup / Gembok</option>
+                    <option value="Order">Outlet Buka & Terdapat Penjualan (Order)</option>
+                    <option value="Tidak">Outlet Buka & Tidak Terdapat Penjualan</option>
+                    <option value="Tutup">⚠️ Outlet Tutup / Gembok</option>
                 </select>
             </div>
 
             <div class="mb-3" id="wrapper-trx">
-                <label class="form-label small fw-bold text-secondary">No. Transaksi (Nota/TRX)</label>
-                <input type="text" class="form-control" name="rkm_trx" placeholder="Masukkan nomor nota penjualan">
+                <label class="form-label small fw-bold text-secondary">Nomor Dokumen Transaksi (Nota / TRX)</label>
+                <input type="text" class="form-control" name="rkm_trx" placeholder="Masukkan nomor nota transaksi resmi">
             </div>
 
             <div class="mb-3">
-                <label class="form-label small fw-bold text-secondary">Catatan / Keterangan Kunjungan</label>
-                <textarea class="form-control" name="rkm_keteranganmember" rows="3" placeholder="Contoh: Owner sedang keluar / Toko tutup gembok" required></textarea>
+                <label class="form-label small fw-bold text-secondary">Catatan Ringkasan Laporan Lapangan</label>
+                <textarea class="form-control" name="rkm_keteranganmember" rows="3" placeholder="Deskripsikan kondisi aktual outlet (Contoh: Bertemu penanggung jawab, toko sedang renovasi, dll)" required></textarea>
             </div>
 
             <div class="mb-4">
-                <label class="form-label small fw-bold text-secondary">Foto Bukti Kunjungan</label>
-                <input type="file" class="form-control" name="foto_kunjungan" accept="image/*" required>
-                <small class="text-muted d-block mt-1">Bolo bisa foto langsung atau ambil dari galeri HP.</small>
+                <label class="form-label small fw-bold text-secondary">Dokumentasi Kamera Bukti Lapangan</label>
+                <input type="file" class="form-control" name="foto_kunjungan[]" accept="image/*" multiple required>
+                <small class="text-muted d-block mt-1">Anda dapat memilih atau mengambil lebih dari satu foto sekaligus sebagai bukti otentik lapangan.</small>
             </div>
 
-            <button type="submit" class="btn btn-danger w-100 py-3 rounded-3 fw-bold shadow-sm">
-                <i class="fa-solid fa-right-from-bracket me-2"></i> SIMPAN & KELUAR TOKO (CHECK-OUT)
+            <button type="button" id="btn-checkout" data-radius="{{ $setting->radius_meter ?? 50 }}" class="btn btn-danger w-100 fw-bold rounded-2 pt-2 pb-2 shadow-sm">
+                <i class="fa-solid fa-right-from-bracket me-2"></i> SIMPAN & SELESAIKAN TUGAS (CHECK-OUT)
             </button>
         </form>
     </div>
@@ -141,8 +166,8 @@
     @else
     <div class="card border-0 rounded-4 shadow-sm bg-success text-white p-4 text-center">
         <i class="fa-solid fa-circle-check fa-3x mb-3"></i>
-        <h5 class="fw-bold">Kunjungan Selesai</h5>
-        <p class="small mb-0 opacity-75">Toko ini sudah selesai dikunjungi hari ini bolo. Mantap!</p>
+        <h5 class="fw-bold">Pelaksanaan Tugas Selesai</h5>
+        <p class="small mb-0 opacity-75">Aktivitas pelaporan untuk tujuan outlet ini telah terekam secara permanen di dalam sistem server untuk hari ini.</p>
     </div>
     @endif
 
@@ -152,7 +177,7 @@
 @push('scripts')
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        // --- LOGIKA TOGGLE FORM & AUTO-FILL TOKO TUTUP ---
+        // --- 1. LOGIKA INTERAKTIF FORM TOGGLE STATUS OPERASIONAL ---
         const selectStatus = document.getElementById('rkm_order_status');
         const wrapperTrx = document.getElementById('wrapper-trx');
         const inputKeterangan = document.querySelector('textarea[name="rkm_keteranganmember"]');
@@ -161,117 +186,163 @@
             selectStatus.addEventListener('change', function() {
                 if (this.value === 'Order') {
                     wrapperTrx.style.display = 'block';
-                    if (inputKeterangan.value === 'Toko Tutup / Gembok') {
+                    if (inputKeterangan.value === 'Outlet Tutup / Gembok') {
                         inputKeterangan.value = '';
                     }
                 } else if (this.value === 'Tutup') {
                     wrapperTrx.style.display = 'none';
-                    inputKeterangan.value = 'Toko Tutup / Gembok';
+                    inputKeterangan.value = 'Outlet Tutup / Gembok';
                 } else {
                     wrapperTrx.style.display = 'none';
-                    if (inputKeterangan.value === 'Toko Tutup / Gembok') {
+                    if (inputKeterangan.value === 'Outlet Tutup / Gembok') {
                         inputKeterangan.value = '';
                     }
                 }
             });
         }
 
-        // --- RUMUS MURNI HITUNG JARAK (HAVERSINE FORMULA) ---
+        // --- 2. FORMULA MATHEMATICAL GEOFENCING (HAVERSINE) ---
         function hitungJarakMeter(lat1, lon1, lat2, lon2) {
-            const R = 6371000; // Radius Bumi dalam satuan Meter
+            const R = 6371000;
             const dLat = (lat2 - lat1) * Math.PI / 180;
             const dLon = (lon2 - lon1) * Math.PI / 180;
             const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
                 Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
                 Math.sin(dLon / 2) * Math.sin(dLon / 2);
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-            return R * c; // Hasil akhir berbentuk Meter
+            return R * c;
         }
 
-        // --- SENSOR GPS AKTIF MURNI ---
+        // --- 3. EKSTRAKSI DATA ACUAN KOORDINAT OUTLET ---
+        const targetTikor = document.getElementById('target-koordinat').innerText.trim();
+        let targetLat = 0,
+            targetLng = 0;
+        if (targetTikor !== 'kosong' && targetTikor.includes(',')) {
+            [targetLat, targetLng] = targetTikor.split(',').map(Number);
+        }
+
+        // === 🔓 PROSES VALIDASI CHECK-IN ===
         const btnCheckIn = document.getElementById('btn-checkin');
         if (btnCheckIn) {
             const batasRadius = Number(btnCheckIn.dataset.radius);
 
             btnCheckIn.addEventListener('click', function() {
-                const targetTikor = document.getElementById('target-koordinat').innerText.trim();
-                if (targetTikor === 'kosong' || !targetTikor.includes(',')) {
+                if (targetTikor === 'kosong') {
                     Swal.fire({
                         icon: 'error',
-                        title: 'Waduh...',
-                        text: 'Toko ini belum memiliki data koordinat GPS bawaan!'
+                        title: 'Akses Terkunci',
+                        text: 'Koordinat lokasi acuan outlet belum terdaftar pada sistem database.'
                     });
                     return;
                 }
-                const [targetLat, targetLng] = targetTikor.split(',').map(Number);
 
-                // Ubah status tombol jadi loading
                 btnCheckIn.disabled = true;
-                btnCheckIn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Menembak Satelit GPS...`;
+                btnCheckIn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Menyinkronkan Koordinat Satelit GPS...`;
 
-                // Panggil Sensor Hardware HP
                 navigator.geolocation.getCurrentPosition(
                     function(position) {
                         const mrLat = position.coords.latitude;
                         const mrLng = position.coords.longitude;
-
-                        // Hitung Jarak Asli antara HP MR dan Titik Toko
                         const jarakMeter = hitungJarakMeter(mrLat, mrLng, targetLat, targetLng);
-                        const jarakFix = jarakMeter.toFixed(1);
 
                         if (jarakMeter > batasRadius) {
                             Swal.fire({
                                 icon: 'error',
-                                title: 'Check-In Ditolak!',
-                                html: `Jarak lu saat ini <b>${jarakFix} Meter</b> dari toko.<br>Sedangkan batas maksimal admin adalah <b>${batasRadius} Meter</b>.<br>Mendekat lagi bolo!`,
+                                title: 'Proses Check-In Ditolak!',
+                                html: `Posisi Anda terdeteksi berada <b>${jarakMeter.toFixed(1)} Meter</b> dari outlet. Batas maksimal toleransi radius kerja adalah <b>${batasRadius} Meter</b>.`,
+                                confirmButtonColor: '#dc3545'
                             });
-                            resetButton();
+                            btnCheckIn.disabled = false;
+                            btnCheckIn.innerHTML = `<i class="fa-solid fa-right-to-bracket me-2"></i> MASUK TOKO (CHECK-IN)`;
                         } else {
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Lokasi Valid!',
-                                text: `Jarak lu ${jarakFix} Meter dari toko. Menyiapkan absen masuk...`,
-                                timer: 1500,
-                                showConfirmButton: false
-                            });
-
-                            // Masukkan koordinat asli HP ke input hidden form
                             document.getElementById('lat_mr').value = mrLat;
                             document.getElementById('lng_mr').value = mrLng;
-
-                            setTimeout(() => {
-                                document.getElementById('form-checkin').submit();
-                            }, 1500);
+                            document.getElementById('form-checkin').submit();
                         }
                     },
                     function(error) {
-                        let pesanError = "Gagal mengunci lokasi lu bolo.";
-                        if (error.code === error.TIMEOUT) {
-                            pesanError = "<b>Waktu pencarian habis (Timeout)!</b><br>Sinyal hardware GPS lemah di dalam ruangan.";
-                        } else if (error.code === error.POSITION_UNAVAILABLE) {
-                            pesanError = "<b>Lokasi tidak tersedia!</b><br>Sistem HP gagal mendeteksi koordinat.";
-                        } else if (error.code === error.PERMISSION_DENIED) {
-                            pesanError = "<b>Izin lokasi ditolak!</b>";
-                        }
-
                         Swal.fire({
                             icon: 'error',
-                            title: 'Masalah GPS',
-                            html: pesanError
+                            title: 'Kegagalan Sinyal Perangkat',
+                            text: 'Gagal mengunci titik koordinat GPS eksternal. Periksa pengaturan lokasi perangkat Anda.'
                         });
-                        resetButton();
+                        btnCheckIn.disabled = false;
+                        btnCheckIn.innerHTML = `<i class="fa-solid fa-right-to-bracket me-2"></i> MASUK TOKO (CHECK-IN)`;
                     }, {
-                        enableHighAccuracy: false, // Gunakan false dulu biar dibantu jaringan internet/BTS pas di dalem ruangan
-                        timeout: 15000, // Kita kasih nafas sensor nyari posisi selama 15 detik
-                        maximumAge: 0
+                        enableHighAccuracy: true,
+                        timeout: 15000
                     }
                 );
             });
         }
 
-        function resetButton() {
-            btnCheckIn.disabled = false;
-            btnCheckIn.innerHTML = `<i class="fa-solid fa-right-to-bracket me-2"></i> MASUK TOKO (CHECK-IN)`;
+        // === 🔓 PROSES VALIDASI CHECK-OUT ===
+        const btnCheckOut = document.getElementById('btn-checkout');
+        const formCheckout = document.getElementById('form-checkout');
+
+        if (btnCheckOut && formCheckout) {
+            const batasRadius = Number(btnCheckOut.dataset.radius);
+
+            btnCheckOut.addEventListener('click', function() {
+                if (!formCheckout.reportValidity()) {
+                    return;
+                }
+
+                if (targetTikor === 'kosong') {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Akses Tergembok',
+                        text: 'Penyimpanan ditolak karena data koordinat outlet tidak valid. Segera hubungi Departemen EDP.'
+                    });
+                    return;
+                }
+
+                btnCheckOut.disabled = true;
+                btnCheckOut.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Memverifikasi Jarak Aktual Checkout...`;
+
+                navigator.geolocation.getCurrentPosition(
+                    function(position) {
+                        const currentLat = position.coords.latitude;
+                        const currentLng = position.coords.longitude;
+                        const jarakMeter = hitungJarakMeter(currentLat, currentLng, targetLat, targetLng);
+
+                        if (jarakMeter > batasRadius) {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Proses Check-Out Ditolak!',
+                                html: `Anda berada <b>${jarakMeter.toFixed(1)} Meter</b> di luar batas area kerja outlet. Silakan kembali ke radius dalam outlet untuk menutup kunjungan resmi.`,
+                                confirmButtonColor: '#dc3545'
+                            });
+                            btnCheckOut.disabled = false;
+                            btnCheckOut.innerHTML = `<i class="fa-solid fa-right-from-bracket me-2"></i> SIMPAN & SELESAIKAN TUGAS (CHECK-OUT)`;
+                        } else {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Lokasi Terverifikasi Valid!',
+                                text: 'Mengunggah data berkas laporan operasional ke server pusat...',
+                                showConfirmButton: false,
+                                timer: 1500
+                            });
+
+                            setTimeout(() => {
+                                formCheckout.submit();
+                            }, 1500);
+                        }
+                    },
+                    function(error) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Geofencing Gagal',
+                            text: 'Sistem tidak dapat memvalidasi posisi perimeter Anda. Pastikan modul GPS eksternal perangkat aktif.'
+                        });
+                        btnCheckOut.disabled = false;
+                        btnCheckOut.innerHTML = `<i class="fa-solid fa-right-from-bracket me-2"></i> SIMPAN & SELESAIKAN TUGAS (CHECK-OUT)`;
+                    }, {
+                        enableHighAccuracy: true,
+                        timeout: 15000
+                    }
+                );
+            });
         }
     });
 </script>

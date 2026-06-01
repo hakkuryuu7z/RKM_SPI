@@ -57,23 +57,56 @@
         @foreach($tugasHariIni as $index => $tugas)
         @php
         $m = $tugas->member; // Relasi ke data member
-        // Simulasi status (Nanti kita hubungin sama tabel tbtr_rkm beneran)
-        $status = 'BELUM';
+
+        // 🎨 1. AMBIL STATUS ASLI HASIL MAPPING CONTROLLER
+        $status = $tugas->status_hari_ini ?? 'BELUM';
+
+        // 🎨 2. RACIK WARNA DAN IKON BERDASARKAN STATUS NYATA
+        if ($status == 'CHECKOUT') {
+        $borderClass = 'border-start border-success border-4'; // Garis pinggir ijo
+        $iconBoxClass = 'bg-success-subtle text-success';
+        $iconClass = 'fa-circle-check';
+        $badgeClass = 'bg-success text-white';
+        $badgeText = 'Selesai';
+        } elseif ($status == 'CHECKIN') {
+        $borderClass = 'border-start border-warning border-4'; // Garis pinggir kuning
+        $iconBoxClass = 'bg-warning-subtle text-warning';
+        $iconClass = 'fa-clock';
+        $badgeClass = 'bg-warning text-dark';
+        $badgeText = 'Active';
+        } else {
+        $borderClass = ''; // Polosan abu-abu bawaan lu
+        $iconBoxClass = 'bg-light text-secondary';
+        $iconClass = 'fa-store';
+        $badgeClass = 'bg-light text-secondary border';
+        $badgeText = 'Belum';
+        }
         @endphp
 
         <a href="{{ route('mr.toko.detail', $tugas->jlr_id) }}" class="text-decoration-none">
-            <div class="card mobile-card bg-white p-3">
+            <div class="card mobile-card bg-white p-3 {{ $borderClass }}">
                 <div class="d-flex align-items-center gap-3">
 
-                    <div class="icon-box {{ $status == 'SELESAI' ? 'bg-success-subtle text-success' : 'bg-light text-secondary' }}">
-                        <i class="fa-solid {{ $status == 'SELESAI' ? 'fa-check' : 'fa-store' }}"></i>
+                    <div class="icon-box {{ $iconBoxClass }}">
+                        <i class="fa-solid {{ $iconClass }}"></i>
                     </div>
 
                     <div class="flex-grow-1">
-                        <h6 class="fw-bold text-dark mb-1 text-truncate" style="max-width: 200px;">
-                            {{ $index + 1 }}. {{ $m ? $m->nama : 'Toko Tidak Ditemukan' }}
-                        </h6>
-                        <p class="small text-muted mb-0"><i class="fa-solid fa-barcode me-1"></i> {{ $tugas->jlr_kodemember }}</p>
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <h6 class="fw-bold text-dark mb-0 text-truncate" style="max-width: 180px;">
+                                {{ $index + 1 }}. {{ $m ? $m->nama : 'Toko Tidak Ditemukan' }}
+                            </h6>
+                            <span class="badge {{ $badgeClass }}" style="font-size: 0.65rem; padding: 2px 6px;">{{ $badgeText }}</span>
+                        </div>
+
+                        <p class="small text-muted mb-0 d-flex align-items-center gap-3">
+                            <span><i class="fa-solid fa-barcode me-1"></i> {{ $tugas->jlr_kodemember }}</span>
+                            @if($tugas->jam_masuk_hari_ini)
+                            <span class="text-secondary" style="font-size: 0.8rem;">
+                                <i class="fa-solid fa-right-to-bracket text-primary me-1"></i> {{ \Carbon\Carbon::parse($tugas->jam_masuk_hari_ini)->format('H:i') }}
+                            </span>
+                            @endif
+                        </p>
                     </div>
 
                     <div class="text-muted">
