@@ -40,7 +40,7 @@ class MemberController extends Controller
         set_time_limit(300);
 
         try {
-            $url_api = 'http://100.85.26.66/rkm_api/api_get_member_koordinat.php';
+            $url_api = 'http://100.86.141.67:8080/rkm_api/api_get_member_koordinat.php';
             $response = Http::timeout(60)->get($url_api);
 
             if ($response->successful()) {
